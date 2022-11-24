@@ -10,9 +10,9 @@ bool Cls::init(std::string model_path)
 {
     this->model_path = model_path;
     ov::Core core;
-    this->model = core.read_model(this->model_path);
+    shared_ptr<ov::Model> model = core.read_model(this->model_path);
     // -------- Step 3. Preprocessing API--------
-    ov::preprocess::PrePostProcessor prep(this->model);
+    ov::preprocess::PrePostProcessor prep(model);
     // Declare section of desired application's input format
     prep.input().tensor()
         .set_layout("NCHW")
@@ -21,11 +21,14 @@ bool Cls::init(std::string model_path)
     prep.input().model()
         .set_layout("NCHW");
     prep.input().preprocess()
-        .mean({0.5f, 0.5f, 0.5f}).
+        .mean({0.5f, 0.5f, 0.5f})
         .scale({0.5f, 0.5f, 0.5f});
     // Dump preprocessor
     std::cout << "Preprocessor: " << prep << std::endl;
-    this->model = prep.build();
+    model = prep.build();
+    model->reshape({{this->cls_batch_num_, cls_image_shape[0], cls_image_shape[1],-1}});
+    this->cls_model = core.compile_model(model, "CPU");
+    this->infer_request = cls_model.create_infer_request();
     return true;
 }
 
@@ -35,12 +38,8 @@ bool Cls::run(std::vector<cv::Mat> img_list, std::vector<OCRPredictResult> &ocr_
     std::vector<float> cls_scores(img_list.size(), 0);
     std::vector<double> cls_times;
 
+    auto input_port = this->cls_model.input();
     int img_num = img_list.size();
-    std::vector<int> cls_image_shape = {3, 48, 192};
-    this->model->reshape({{this->cls_batch_num_, cls_image_shape[0], cls_image_shape[1],-1}});
-    ov::CompiledModel cls_model = core.compile_model(this->model, "CPU");
-    this->infer_request = cls_model.create_infer_request();
-    auto input_port = cls_model.input();
 
     for (int beg_img_no = 0; beg_img_no < img_num; beg_img_no += this->cls_batch_num_) {
         auto preprocess_start = std::chrono::steady_clock::now();
@@ -52,7 +51,7 @@ bool Cls::run(std::vector<cv::Mat> img_list, std::vector<OCRPredictResult> &ocr_
             cv::Mat srcimg;
             img_list[ino].copyTo(srcimg);
             cv::Mat resize_img;
-            this->resize_op_.Run(srcimg, resize_img, cls_image_shape);
+            this->resize_op_.Run(srcimg, resize_img, this->cls_image_shape);
 
             if (resize_img.cols < cls_image_shape[2]) {
                 cv::copyMakeBorder(resize_img, resize_img, 0, 0, 0,
@@ -64,7 +63,7 @@ bool Cls::run(std::vector<cv::Mat> img_list, std::vector<OCRPredictResult> &ocr_
             batch_tensors.push_back(input_tensor);
         }
     
-        this->infer_request.set_input_tensor(batch_tensors);
+        this->infer_request.set_input_tensors(batch_tensors);
         // -------- Step 7. Start inference --------
         this->infer_request.infer();
 

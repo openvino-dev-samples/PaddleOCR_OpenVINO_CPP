@@ -15,8 +15,6 @@
 #include "opencv2/core.hpp"
 #include "opencv2/imgcodecs.hpp"
 #include "opencv2/imgproc.hpp"
-#include "paddle_api.h"
-#include "paddle_inference_api.h"
 #include <chrono>
 #include <iomanip>
 #include <iostream>
@@ -69,13 +67,13 @@ void Normalize::Run(cv::Mat *im, const std::vector<float> &mean,
 }
 
 void ResizeImgType0::Run(const cv::Mat &img, cv::Mat &resize_img,
-                         string limit_type, int limit_side_len, float &ratio_h,
+                         std::string limit_type, int limit_side_len, float &ratio_h,
                          float &ratio_w) {
   int w = img.cols;
   int h = img.rows;
   float ratio = 1.f;
   if (limit_type == "min") {
-    int min_wh = min(h, w);
+    int min_wh = std::min(h, w);
     if (min_wh < limit_side_len) {
       if (h < w) {
         ratio = float(limit_side_len) / float(h);
@@ -84,7 +82,7 @@ void ResizeImgType0::Run(const cv::Mat &img, cv::Mat &resize_img,
       }
     }
   } else {
-    int max_wh = max(h, w);
+    int max_wh = std::max(h, w);
     if (max_wh > limit_side_len) {
       if (h > w) {
         ratio = float(limit_side_len) / float(h);
@@ -97,8 +95,8 @@ void ResizeImgType0::Run(const cv::Mat &img, cv::Mat &resize_img,
   int resize_h = int(float(h) * ratio);
   int resize_w = int(float(w) * ratio);
 
-  resize_h = max(int(round(float(resize_h) / 32) * 32), 32);
-  resize_w = max(int(round(float(resize_w) / 32) * 32), 32);
+  resize_h = std::max(int(round(float(resize_h) / 32) * 32), 32);
+  resize_w = std::max(int(round(float(resize_w) / 32) * 32), 32);
 
   cv::resize(img, resize_img, cv::Size(resize_w, resize_h));
   ratio_h = float(resize_h) / float(h);

@@ -27,9 +27,6 @@
 #include <fstream>
 #include <numeric>
 
-using namespace std;
-using namespace paddle;
-
 namespace PaddleOCR {
 
 class Normalize {
@@ -51,7 +48,7 @@ public:
 
 class ResizeImgType0 {
 public:
-  virtual void Run(const cv::Mat &img, cv::Mat &resize_img, string limit_type,
+  virtual void Run(const cv::Mat &img, cv::Mat &resize_img, std::string limit_type,
                    int limit_side_len, float &ratio_h, float &ratio_w);
 };
 
@@ -64,7 +61,6 @@ public:
 class ClsResizeImg {
 public:
   virtual void Run(const cv::Mat &img, cv::Mat &resize_img,
-                   bool use_tensorrt = false,
                    const std::vector<int> &rec_image_shape = {3, 48, 192});
 };
 

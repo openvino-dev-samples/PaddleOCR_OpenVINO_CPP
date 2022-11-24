@@ -10,7 +10,7 @@ bool Rec::init(string model_path, const string &label_path)
 {
     this->model_path = model_path;
     ov::Core core;
-    model = core.read_model(this->modesl_path);
+    this->model = core.read_model(this->model_path);
     // -------- Step 3. Preprocessing API--------
     ov::preprocess::PrePostProcessor prep(this->model);
     // Declare section of desired application's input format
@@ -21,12 +21,14 @@ bool Rec::init(string model_path, const string &label_path)
     prep.input().model()
         .set_layout("NCHW");
     prep.input().preprocess()
-        .mean({0.5f, 0.5f, 0.5f}).
+        .mean({0.5f, 0.5f, 0.5f})
         .scale({0.5f, 0.5f, 0.5f});
     // Dump preprocessor
     std::cout << "Preprocessor: " << prep << std::endl;
     this->model = prep.build();
-
+    this->model->reshape({{-1, this->rec_image_shape_[0], this->rec_image_shape_[1],-1}});
+    this->rec_model = core.compile_model(this->model, "CPU");
+    this->infer_request = this->rec_model.create_infer_request();
     this->label_list_ = Utility::ReadDict(label_path);
     this->label_list_.insert(this->label_list_.begin(),
                              "#"); // blank char for ctc
@@ -46,11 +48,7 @@ bool Rec::run(std::vector<cv::Mat> img_list, std::vector<OCRPredictResult> &ocr_
         width_list.push_back(float(img_list[i].cols) / img_list[i].rows);
     }
     std::vector<int> indices = Utility::argsort(width_list);
-
-    this->model->reshape({{-1, this->rec_image_shape_[0], this->rec_image_shape_[1],-1}});
-    ov::CompiledModel rec_model = core.compile_model(this->model, "CPU");
-    this->infer_request = rec_model.create_infer_request();
-    auto input_port = rec_model.input();
+    auto input_port = this->rec_model.input();
 
 
     for (int beg_img_no = 0; beg_img_no < img_num;
@@ -83,7 +81,7 @@ bool Rec::run(std::vector<cv::Mat> img_list, std::vector<OCRPredictResult> &ocr_
         }
 
 
-        this->infer_request.set_input_tensor(batch_tensors);
+        this->infer_request.set_input_tensors(batch_tensors);
         // -------- Step 7. Start inference --------
         this->infer_request.infer();
 

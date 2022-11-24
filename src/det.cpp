@@ -9,8 +9,7 @@ Det::~Det() {}
 bool Det::init(std::string model_path)
 {
     this->model_path = model_path;
-    ov::Core core;
-    this->model = core.read_model(this->model_path);
+    this->model = this->core.read_model(this->model_path);
     // -------- Step 3. Preprocessing API--------
     ov::preprocess::PrePostProcessor prep(this->model);
     // Declare section of desired application's input format
@@ -21,7 +20,7 @@ bool Det::init(std::string model_path)
     prep.input().model()
         .set_layout("NCHW");
     prep.input().preprocess()
-        .mean({0.485f, 0.456f, 0.406f}).
+        .mean({0.485f, 0.456f, 0.406f})
         .scale({0.229f, 0.224f, 0.225f});
     // Dump preprocessor
     std::cout << "Preprocessor: " << prep << std::endl;
@@ -37,12 +36,12 @@ bool Det::run(cv::Mat &src_img, std::vector<OCRPredictResult> &ocr_results)
     cv::Mat srcimg;
     cv::Mat resize_img;
     src_img.copyTo(srcimg);
-
+    std::vector<std::vector<std::vector<int>>> boxes;
     this->resize_op_.Run(src_img, resize_img, this->limit_type_,
                         this->limit_side_len_, ratio_h, ratio_w);
 
     this->model->reshape({1, 3, resize_img.rows, resize_img.cols});
-    ov::CompiledModel det_model = core.compile_model(this->model, "CPU");
+    ov::CompiledModel det_model = this->core.compile_model(this->model, "CPU");
     this->infer_request = det_model.create_infer_request();
     auto input_port = det_model.input();
     // Create tensor from external memory
@@ -50,7 +49,7 @@ bool Det::run(cv::Mat &src_img, std::vector<OCRPredictResult> &ocr_results)
 
     // -------- Step 6. Set input --------
     resize_img.convertTo(resize_img, CV_32FC3);
-    ov::Tensor input_tensor(this->input_port.get_element_type(), this->input_port.get_shape(), (float*)resize_img.data);
+    ov::Tensor input_tensor(input_port.get_element_type(), input_port.get_shape(), (float*)resize_img.data);
     this->infer_request.set_input_tensor(input_tensor);
     // -------- Step 7. Start inference --------
     this->infer_request.infer();
