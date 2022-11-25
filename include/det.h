@@ -25,17 +25,20 @@ public:
     Det();
     ~Det();
 
-    bool init(std::string model_path);
+    bool init(cv::Mat &src_img, std::string model_path);
 
-    bool run(cv::Mat &src_img, std::vector<OCRPredictResult> &ocr_results);
+    bool run(std::vector<OCRPredictResult> &ocr_results);
 
 private:
     // ov::CompiledModel detect_model;
     ov::InferRequest infer_request;
     string model_path;
+    cv::Mat src_img;
     shared_ptr<ov::Model> model;
-    ov::Core core;
-
+    ov::CompiledModel det_model;
+    float ratio_h{};
+    float ratio_w{};
+    cv::Mat resize_img;
     string limit_type_ = "max";
     int limit_side_len_ = 960;
 

@@ -1,0 +1,3 @@
+/home/ethan/PaddleOCR_OpenVINO_CPP/build/CMakeFiles/ocr_reader.dir
+/home/ethan/PaddleOCR_OpenVINO_CPP/build/CMakeFiles/edit_cache.dir
+/home/ethan/PaddleOCR_OpenVINO_CPP/build/CMakeFiles/rebuild_cache.dir

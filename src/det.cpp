@@ -6,10 +6,17 @@ Det::Det() {}
 
 Det::~Det() {}
 
-bool Det::init(std::string model_path)
-{
+bool Det::init(cv::Mat &src_img, std::string model_path)
+{   
+    ov::Core core;
     this->model_path = model_path;
-    this->model = this->core.read_model(this->model_path);
+    this->model = core.read_model(this->model_path);
+    this->src_img = src_img;
+    this->resize_op_.Run(this->src_img, this->resize_img, this->limit_type_,
+                        this->limit_side_len_, this->ratio_h, this->ratio_w);
+
+    this->model->reshape({{1, 3, resize_img.rows, resize_img.cols}});
+
     // -------- Step 3. Preprocessing API--------
     ov::preprocess::PrePostProcessor prep(this->model);
     // Declare section of desired application's input format
@@ -25,25 +32,16 @@ bool Det::init(std::string model_path)
     // Dump preprocessor
     std::cout << "Preprocessor: " << prep << std::endl;
     this->model = prep.build();
+
+    this->det_model = core.compile_model(this->model, "CPU");
+    this->infer_request = this->det_model.create_infer_request();
     return true;
 }
 
-bool Det::run(cv::Mat &src_img, std::vector<OCRPredictResult> &ocr_results)
+bool Det::run(std::vector<OCRPredictResult> &ocr_results)
 {
-    float ratio_h{};
-    float ratio_w{};
-
-    cv::Mat srcimg;
-    cv::Mat resize_img;
-    src_img.copyTo(srcimg);
     std::vector<std::vector<std::vector<int>>> boxes;
-    this->resize_op_.Run(src_img, resize_img, this->limit_type_,
-                        this->limit_side_len_, ratio_h, ratio_w);
-
-    this->model->reshape({1, 3, resize_img.rows, resize_img.cols});
-    ov::CompiledModel det_model = this->core.compile_model(this->model, "CPU");
-    this->infer_request = det_model.create_infer_request();
-    auto input_port = det_model.input();
+    auto input_port = this->det_model.input();
     // Create tensor from external memory
     // ov::Tensor input_tensor(input_port.get_element_type(), input_port.get_shape(), input_data.data());
 
@@ -88,7 +86,7 @@ bool Det::run(cv::Mat &src_img, std::vector<OCRPredictResult> &ocr_results)
         pred_map, bit_map, this->det_db_box_thresh_, this->det_db_unclip_ratio_,
         this->det_db_score_mode_);
 
-    boxes = post_processor_.FilterTagDetRes(boxes, ratio_h, ratio_w, srcimg);
+    boxes = post_processor_.FilterTagDetRes(boxes, this->ratio_h, this->ratio_w, this->src_img);
     for (int i = 0; i < boxes.size(); i++) {
         OCRPredictResult res;
         res.box = boxes[i];

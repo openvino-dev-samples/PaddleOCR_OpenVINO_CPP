@@ -1,0 +1,23 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "cppdbg",
+            "request": "launch",
+            "name": "(gdb) Launch",
+            "program": "/home/ethan/PaddleOCR_OpenVINO_CPP/build/ocr_reader",
+            "args": ["/home/ethan/PaddleOCR_OpenVINO_CPP/data/00009282.jpg", 
+                "/home/ethan/PaddleOCR_OpenVINO_CPP/data/ppocr_keys_v1.txt",
+                "/home/ethan/Downloads/PaddleOCR/ch_PP-OCRv3_det_infer/inference.pdmodel",
+                "/home/ethan/Downloads/PaddleOCR/ch_ppocr_mobile_v2.0_cls_infer/inference.pdmodel",
+                "/home/ethan/Downloads/PaddleOCR/ch_PP-OCRv3_rec_infer/inference.pdmodel"
+                ],
+            "stopOnEntry": true,
+            "cwd": "/",
+            "arguments": ""
+        }
+    ]
+}
