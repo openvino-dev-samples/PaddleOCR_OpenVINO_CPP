@@ -12,10 +12,10 @@ bool Det::init(cv::Mat &src_img, std::string model_path)
     this->model_path = model_path;
     this->model = core.read_model(this->model_path);
     this->src_img = src_img;
-    this->resize_op_.Run(this->src_img, this->resize_img, this->limit_type_,
+    this->resize_op_.Run(this->src_img, resize_img, this->limit_type_,
                         this->limit_side_len_, this->ratio_h, this->ratio_w);
 
-    this->model->reshape({{1, 3, resize_img.rows, resize_img.cols}});
+    this->model->reshape({1, 3, resize_img.rows, resize_img.cols});
 
     // -------- Step 3. Preprocessing API--------
     ov::preprocess::PrePostProcessor prep(this->model);

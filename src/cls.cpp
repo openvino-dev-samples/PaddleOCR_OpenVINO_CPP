@@ -11,6 +11,7 @@ bool Cls::init(std::string model_path)
     this->model_path = model_path;
     ov::Core core;
     shared_ptr<ov::Model> model = core.read_model(this->model_path);
+    model->reshape({{this->cls_batch_num_, cls_image_shape[0], cls_image_shape[1],-1}});
     // -------- Step 3. Preprocessing API--------
     ov::preprocess::PrePostProcessor prep(model);
     // Declare section of desired application's input format
@@ -26,7 +27,7 @@ bool Cls::init(std::string model_path)
     // Dump preprocessor
     std::cout << "Preprocessor: " << prep << std::endl;
     model = prep.build();
-    model->reshape({{this->cls_batch_num_, cls_image_shape[0], cls_image_shape[1],-1}});
+    
     this->cls_model = core.compile_model(model, "CPU");
     this->infer_request = cls_model.create_infer_request();
     return true;
@@ -59,7 +60,9 @@ bool Cls::run(std::vector<cv::Mat> img_list, std::vector<OCRPredictResult> &ocr_
                                 cv::BORDER_CONSTANT, cv::Scalar(0, 0, 0));
             }
             resize_img.convertTo(resize_img, CV_32FC3);
-            ov::Tensor input_tensor(input_port.get_element_type(), input_port.get_shape(), (float*)resize_img.data);
+            auto input_tensor = this->infer_request.get_input_tensor();
+            input_tensor.data<float>() = (float*)resize_img.data;
+            // ov::Tensor input_tensor(input_port.get_element_type(), input_port.get_shape(), (float*)resize_img.data);
             batch_tensors.push_back(input_tensor);
         }
     

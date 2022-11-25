@@ -11,6 +11,7 @@ bool Rec::init(string model_path, const string &label_path)
     this->model_path = model_path;
     ov::Core core;
     this->model = core.read_model(this->model_path);
+    this->model->reshape({{-1, this->rec_image_shape_[0], this->rec_image_shape_[1],-1}});
     // -------- Step 3. Preprocessing API--------
     ov::preprocess::PrePostProcessor prep(this->model);
     // Declare section of desired application's input format
@@ -26,7 +27,7 @@ bool Rec::init(string model_path, const string &label_path)
     // Dump preprocessor
     std::cout << "Preprocessor: " << prep << std::endl;
     this->model = prep.build();
-    this->model->reshape({{-1, this->rec_image_shape_[0], this->rec_image_shape_[1],-1}});
+    
     this->rec_model = core.compile_model(this->model, "CPU");
     this->infer_request = this->rec_model.create_infer_request();
     this->label_list_ = Utility::ReadDict(label_path);
@@ -76,7 +77,9 @@ bool Rec::run(std::vector<cv::Mat> img_list, std::vector<OCRPredictResult> &ocr_
             this->resize_op_.Run(srcimg, resize_img, max_wh_ratio, this->rec_image_shape_);
             
             resize_img.convertTo(resize_img, CV_32FC3);
-            ov::Tensor input_tensor(input_port.get_element_type(), input_port.get_shape(), (float*)resize_img.data);
+            auto input_tensor = this->infer_request.get_input_tensor();
+            input_tensor.data<float>() = (float*)resize_img.data;
+            // ov::Tensor input_tensor(input_port.get_element_type(), input_port.get_shape(), (float*)resize_img.data);
             batch_tensors.push_back(input_tensor);
         }
 
