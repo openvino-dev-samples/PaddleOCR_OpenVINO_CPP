@@ -47,4 +47,6 @@ int main(int argc, char *argv[])
     }
     rec.run(img_list, ocr_result);
     Utility::print_result(ocr_result);
+    Utility::VisualizeBboxes(src_img, ocr_result,
+                                 "./result.jpg");
 }

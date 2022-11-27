@@ -10,25 +10,25 @@ bool Cls::init(std::string model_path)
 {
     this->model_path = model_path;
     ov::Core core;
-    shared_ptr<ov::Model> model = core.read_model(this->model_path);
-    model->reshape({{this->cls_batch_num_, cls_image_shape[0], cls_image_shape[1],-1}});
+    this->model = core.read_model(this->model_path);
+    this->model->reshape({{ov::Dimension(1, 6), cls_image_shape[0], cls_image_shape[1], cls_image_shape[2]}});
+
     // -------- Step 3. Preprocessing API--------
-    ov::preprocess::PrePostProcessor prep(model);
+    ov::preprocess::PrePostProcessor prep(this->model);
     // Declare section of desired application's input format
     prep.input().tensor()
-        .set_layout("NCHW")
+        .set_layout("NHWC")
         .set_color_format(ov::preprocess::ColorFormat::BGR);
     // Specify actual model layout
     prep.input().model()
         .set_layout("NCHW");
     prep.input().preprocess()
         .mean({0.5f, 0.5f, 0.5f})
-        .scale({0.5f, 0.5f, 0.5f});
+        .scale({255.0 * 0.5f, 255.0 * 0.5f, 255.0 * 0.5f});
     // Dump preprocessor
     std::cout << "Preprocessor: " << prep << std::endl;
-    model = prep.build();
-    
-    this->cls_model = core.compile_model(model, "CPU");
+    this->model = prep.build();
+    this->cls_model = core.compile_model(this->model, "CPU");
     this->infer_request = cls_model.create_infer_request();
     return true;
 }
@@ -41,29 +41,40 @@ bool Cls::run(std::vector<cv::Mat> img_list, std::vector<OCRPredictResult> &ocr_
 
     auto input_port = this->cls_model.input();
     int img_num = img_list.size();
-
     for (int beg_img_no = 0; beg_img_no < img_num; beg_img_no += this->cls_batch_num_) {
-        auto preprocess_start = std::chrono::steady_clock::now();
         int end_img_no = std::min(img_num, beg_img_no + this->cls_batch_num_);
         int batch_num = end_img_no - beg_img_no;
         // preprocess    
         std::vector<ov::Tensor> batch_tensors;
+        // auto input_tensor = this->infer_request.get_input_tensor();
+        // auto input_data = input_tensor.data<float>();
+        ov::Shape intput_shape = {batch_num, cls_image_shape[1], cls_image_shape[2],3};
         for (int ino = beg_img_no; ino < end_img_no; ino++) {
             cv::Mat srcimg;
             img_list[ino].copyTo(srcimg);
             cv::Mat resize_img;
             this->resize_op_.Run(srcimg, resize_img, this->cls_image_shape);
-
+            resize_img.convertTo(resize_img, CV_32FC1);
             if (resize_img.cols < cls_image_shape[2]) {
                 cv::copyMakeBorder(resize_img, resize_img, 0, 0, 0,
                                 cls_image_shape[2] - resize_img.cols,
                                 cv::BORDER_CONSTANT, cv::Scalar(0, 0, 0));
             }
-            resize_img.convertTo(resize_img, CV_32FC3);
-            auto input_tensor = this->infer_request.get_input_tensor();
-            input_tensor.data<float>() = (float*)resize_img.data;
-            // ov::Tensor input_tensor(input_port.get_element_type(), input_port.get_shape(), (float*)resize_img.data);
+            ov::Tensor input_tensor(input_port.get_element_type(), intput_shape, (float*)resize_img.data);
             batch_tensors.push_back(input_tensor);
+            
+            // for (int h = 0; h < cls_image_shape[1]; h++)
+            // {
+            //     for (int w = 0; w < resize_img.cols; w++)
+            //     {
+            //         for (int c = 0; c < 3; c++)
+            //         {
+            //             int index = c + 3*w + 3*resize_img.cols*h + 3*resize_img.cols*cls_image_shape[1]*ino;
+            //             input_data[index] = float(resize_img.at<cv::Vec3b>(h, w)[c]);
+            //         }
+            //     }
+            // }
+            // ov::Tensor input_tensor(input_port.get_element_type(), input_port.get_shape(), (float*)resize_img.data);
         }
     
         this->infer_request.set_input_tensors(batch_tensors);
@@ -71,7 +82,7 @@ bool Cls::run(std::vector<cv::Mat> img_list, std::vector<OCRPredictResult> &ocr_
         this->infer_request.infer();
 
 
-        auto output = this->infer_request.get_output_tensor(0);
+        auto output = this->infer_request.get_output_tensor();
         const float *out_data = output.data<const float>();
         for (size_t batch_idx = 0; batch_idx < output.get_size() / 2; batch_idx++){
             int label = int(

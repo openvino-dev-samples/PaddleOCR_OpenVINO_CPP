@@ -34,18 +34,24 @@ public:
 
 private:
     // ov::CompiledModel detect_model;
+    ov::Core core;
     ov::InferRequest infer_request;
     string model_path;
     shared_ptr<ov::Model> model;
     ov::CompiledModel rec_model;
 
+    std::vector<float> mean_ = {0.5f, 0.5f, 0.5f};
+    std::vector<float> scale_ = {1 / 0.5f, 1 / 0.5f, 1 / 0.5f};
+    bool is_scale_ = true;
     std::vector<std::string> label_list_;
     int rec_batch_num_ = 6;
     int rec_img_h_ = 32;
     int rec_img_w_ = 320;
     std::vector<int> rec_image_shape_ = {3, rec_img_h_, rec_img_w_};
-
-
+    
     CrnnResizeImg resize_op_;
+    Normalize normalize_op_;
+    PermuteBatch permute_op_;
+
 };
 }

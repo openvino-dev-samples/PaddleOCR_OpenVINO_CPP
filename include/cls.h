@@ -32,6 +32,7 @@ private:
     // ov::CompiledModel detect_model;
     ov::InferRequest infer_request;
     string model_path;
+    shared_ptr<ov::Model> model;
     ov::CompiledModel cls_model;
     int cls_batch_num_ = 1;
     std::vector<int> cls_image_shape = {3, 48, 192};

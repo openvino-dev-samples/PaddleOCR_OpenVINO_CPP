@@ -28,7 +28,7 @@ bool Det::init(cv::Mat &src_img, std::string model_path)
         .set_layout("NCHW");
     prep.input().preprocess()
         .mean({0.485f, 0.456f, 0.406f})
-        .scale({0.229f, 0.224f, 0.225f});
+        .scale({255.0 * 0.229f, 255.0 * 0.224f, 255.0 * 0.225f});
     // Dump preprocessor
     std::cout << "Preprocessor: " << prep << std::endl;
     this->model = prep.build();
@@ -46,7 +46,7 @@ bool Det::run(std::vector<OCRPredictResult> &ocr_results)
     // ov::Tensor input_tensor(input_port.get_element_type(), input_port.get_shape(), input_data.data());
 
     // -------- Step 6. Set input --------
-    resize_img.convertTo(resize_img, CV_32FC3);
+    resize_img.convertTo(resize_img, CV_32FC1);
     ov::Tensor input_tensor(input_port.get_element_type(), input_port.get_shape(), (float*)resize_img.data);
     this->infer_request.set_input_tensor(input_tensor);
     // -------- Step 7. Start inference --------
