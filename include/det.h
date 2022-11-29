@@ -26,13 +26,12 @@ public:
     ~Det();
 
     bool init(cv::Mat &src_img, std::string model_path);
-
     bool run(std::vector<OCRPredictResult> &ocr_results);
 
 private:
-    // ov::CompiledModel detect_model;
+
     ov::InferRequest infer_request;
-    string model_path;
+    std::string model_path;
     cv::Mat src_img;
     shared_ptr<ov::Model> model;
     ov::CompiledModel det_model;
@@ -41,6 +40,10 @@ private:
     cv::Mat resize_img;
     string limit_type_ = "max";
     int limit_side_len_ = 960;
+    double e = 1.0 / 255.0;
+    
+    std::vector<float> mean_ = {0.485f, 0.456f, 0.406f};
+    std::vector<float> scale_ = {0.229f, 0.224f, 0.225f};
 
     double det_db_thresh_ = 0.3;
     double det_db_box_thresh_ = 0.5;
@@ -48,8 +51,8 @@ private:
     std::string det_db_score_mode_ = "slow";
     bool use_dilation_ = false;
 
+    // resize
     ResizeImgType0 resize_op_;
-
     // post-process
     DBPostProcessor post_processor_;
 };

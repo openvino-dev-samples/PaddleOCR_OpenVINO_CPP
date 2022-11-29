@@ -17,22 +17,21 @@ bool Det::init(cv::Mat &src_img, std::string model_path)
 
     this->model->reshape({1, 3, resize_img.rows, resize_img.cols});
 
-    // -------- Step 3. Preprocessing API--------
+    // preprocessing API
     ov::preprocess::PrePostProcessor prep(this->model);
-    // Declare section of desired application's input format
+    // declare section of desired application's input format
     prep.input().tensor()
         .set_layout("NHWC")
         .set_color_format(ov::preprocess::ColorFormat::BGR);
-    // Specify actual model layout
+    // specify actual model layout
     prep.input().model()
         .set_layout("NCHW");
     prep.input().preprocess()
-        .mean({0.485f, 0.456f, 0.406f})
-        .scale({255.0 * 0.229f, 255.0 * 0.224f, 255.0 * 0.225f});
-    // Dump preprocessor
+        .mean(this->mean_)
+        .scale(this->scale_);
+    // dump preprocessor
     std::cout << "Preprocessor: " << prep << std::endl;
     this->model = prep.build();
-
     this->det_model = core.compile_model(this->model, "CPU");
     this->infer_request = this->det_model.create_infer_request();
     return true;
@@ -42,14 +41,13 @@ bool Det::run(std::vector<OCRPredictResult> &ocr_results)
 {
     std::vector<std::vector<std::vector<int>>> boxes;
     auto input_port = this->det_model.input();
-    // Create tensor from external memory
-    // ov::Tensor input_tensor(input_port.get_element_type(), input_port.get_shape(), input_data.data());
 
-    // -------- Step 6. Set input --------
-    resize_img.convertTo(resize_img, CV_32FC1);
+    // -------- set input --------
+    double e = 1.0 / 255.0;
+    resize_img.convertTo(resize_img, CV_32FC3, e);
     ov::Tensor input_tensor(input_port.get_element_type(), input_port.get_shape(), (float*)resize_img.data);
     this->infer_request.set_input_tensor(input_tensor);
-    // -------- Step 7. Start inference --------
+    // -------- start inference --------
     this->infer_request.infer();
 
     auto output = this->infer_request.get_output_tensor(0);
@@ -58,7 +56,6 @@ bool Det::run(std::vector<OCRPredictResult> &ocr_results)
     ov::Shape output_shape = this->model->output().get_shape();
     const size_t n2 = output_shape[2];
     const size_t n3 = output_shape[3];
-
     const int n = n2 * n3;
 
     std::vector<float> pred(n, 0.0);
@@ -96,5 +93,4 @@ bool Det::run(std::vector<OCRPredictResult> &ocr_results)
     Utility::sorted_boxes(ocr_results);
     return true;
 }
-
 }

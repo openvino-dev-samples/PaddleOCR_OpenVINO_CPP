@@ -23,20 +23,24 @@ class Cls
 public:
     Cls();
     ~Cls();
-    double cls_thresh = 0.9;
-    bool init(std::string model_path);
     
+    bool init(std::string model_path);
     bool run(std::vector<cv::Mat> img_list, std::vector<OCRPredictResult> &ocr_results);
+    
+    double cls_thresh = 0.5;
 
 private:
-    // ov::CompiledModel detect_model;
     ov::InferRequest infer_request;
     string model_path;
     shared_ptr<ov::Model> model;
     ov::CompiledModel cls_model;
+
+    double e = 1.0 / 255.0;
+    std::vector<float> mean_ = {0.5f, 0.5f, 0.5f};
+    std::vector<float> scale_ = {0.5f, 0.5f, 0.5f};
     int cls_batch_num_ = 1;
     std::vector<int> cls_image_shape = {3, 48, 192};
+    // resize
     ClsResizeImg resize_op_;
-
 };
 }

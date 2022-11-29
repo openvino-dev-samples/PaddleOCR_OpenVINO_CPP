@@ -8,28 +8,17 @@ Rec::~Rec() {}
 
 bool Rec::init(string model_path, const string &label_path)
 {
+    ov::Core core;
     this->model_path = model_path;
-    this->model = this->core.read_model(this->model_path);
-    // -------- Step 3. Preprocessing API--------
-    ov::preprocess::PrePostProcessor prep(this->model);
-    // Declare section of desired application's input format
-    prep.input().tensor()
-        .set_layout("NHWC")
-        .set_color_format(ov::preprocess::ColorFormat::BGR);
-    // Specify actual model layout
-    prep.input().model()
-        .set_layout("NCHW");
-    prep.input().preprocess()
-        .mean({0.5f, 0.5f, 0.5f})
-        .scale({255.0 * 0.5f, 255.0 * 0.5f, 255.0 * 0.5f});
-    // Dump preprocessor
-    std::cout << "Preprocessor: " << prep << std::endl;
-    this->model = prep.build();
+    this->model = core.read_model(this->model_path);
+    // reshape the model for dynamic batch size and sentence width
+    this->model->reshape({{ov::Dimension(1, 6), this->rec_image_shape_[0], this->rec_image_shape_[1], -1}});
+    this->rec_model = core.compile_model(this->model, "CPU");
+    this->infer_request = this->rec_model.create_infer_request();
     this->label_list_ = Utility::ReadDict(label_path);
     this->label_list_.insert(this->label_list_.begin(),
                              "#"); // blank char for ctc
     this->label_list_.push_back(" ");
-
     return true;
 }
 
@@ -45,8 +34,6 @@ bool Rec::run(std::vector<cv::Mat> img_list, std::vector<OCRPredictResult> &ocr_
     }
     std::vector<int> indices = Utility::argsort(width_list);
     
-
-
     for (int beg_img_no = 0; beg_img_no < img_num;
         beg_img_no += this->rec_batch_num_) {
         int end_img_no = std::min(img_num, beg_img_no + this->rec_batch_num_);
@@ -61,69 +48,32 @@ bool Rec::run(std::vector<cv::Mat> img_list, std::vector<OCRPredictResult> &ocr_
             max_wh_ratio = std::max(max_wh_ratio, wh_ratio);
         }
 
-        std::vector<cv::Mat> img_batch;
-        std::vector<ov::Tensor> batch_tensors;
-
         int batch_width = imgW;
         std::vector<cv::Mat> norm_img_batch;
         for (int ino = beg_img_no; ino < end_img_no; ino++) {
             cv::Mat srcimg;
             img_list[indices[ino]].copyTo(srcimg);
             cv::Mat resize_img;
+            // preprocess 
             this->resize_op_.Run(srcimg, resize_img, max_wh_ratio, this->rec_image_shape_);
-            resize_img.convertTo(resize_img, CV_32FC1);
-
+            this->normalize_op_.Run(&resize_img, this->mean_, this->scale_,
+                        this->is_scale_);
             norm_img_batch.push_back(resize_img);
-            
-            // auto input_tensor = ov::Tensor(this->model->input().get_element_type(), {1, imgH,  resize_img.cols, 3});
-            // auto input_data = input_tensor.data<float>();
-            // input_data = (float*)resize_img.data;
-            // batch_tensors.push_back(input_tensor);
             batch_width = max(resize_img.cols, batch_width);
         }
-
-
-
-        // for (int batch = 0; batch < batch_num; batch++)
-        // {
-        //     for (int h = 0; h < imgH; h++)
-        //     {
-        //         for (int w = 0; w < batch_width; w++)
-        //         {
-        //             for (int c = 0; c < 3; c++)
-        //             {
-        //                 int index = c + 3*w + 3*batch_width*h + 3*batch_width*imgH*batch;
-        //                 data[index] = float(norm_img_batch[batch].at<Vec3b>(h, w)[c]);
-        //             }
-        //         }
-        //     }
-        // }
-        this->model->reshape({batch_num, imgH, batch_width,3});
-        // float data[batch_num * 3 * imgH * batch_width];
-
-
-
-        this->rec_model = this->core.compile_model(this->model, "CPU");
-        this->infer_request = this->rec_model.create_infer_request();
+        // prepare input tensor
+        std::vector<float> input(batch_num * 3 * imgH * batch_width, 0.0f);
+        ov::Shape intput_shape = {batch_num, 3, imgH, batch_width};
+        this->permute_op_.Run(norm_img_batch, input.data());
         auto input_port = this->rec_model.input();
-        ov::Tensor input_tensor = this->infer_request.get_input_tensor();
-        
-        const size_t batch_size = norm_img_batch.size();
-
-        for (size_t image_id = 0; image_id < norm_img_batch.size(); image_id++) {
-            const size_t image_size = ov::shape_size(this->model->input().get_shape()) / batch_size;
-            std::memcpy(input_tensor.data<float>() + image_id * image_size, (float*)norm_img_batch[image_id].data, image_size*sizeof(float));
-        }
-        // ov::Tensor input_tensor(input_port.get_element_type(), input_port.get_shape(), data);
-        // this->infer_request.set_input_tensor(input_tensor);
-        // -------- Step 7. Start inference --------
+        ov::Tensor input_tensor(input_port.get_element_type(), intput_shape, input.data());
+        this->infer_request.set_input_tensor(input_tensor);
+        // start inference
         this->infer_request.infer();
 
         auto output = this->infer_request.get_output_tensor();
         const float *out_data = output.data<const float>();
-
         auto predict_shape = output.get_shape();
-
 
         // predict_batch is the result of Last FC with softmax
         for (int m = 0; m < predict_shape[0]; m++) {
@@ -166,5 +116,4 @@ bool Rec::run(std::vector<cv::Mat> img_list, std::vector<OCRPredictResult> &ocr_
     }
     return true;
 }
-
 }

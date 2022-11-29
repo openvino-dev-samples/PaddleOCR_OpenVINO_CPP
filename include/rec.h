@@ -29,12 +29,9 @@ public:
     ~Rec();
 
     bool init(string model_path, const string &label_path);
-
     bool run(std::vector<cv::Mat> img_list, std::vector<OCRPredictResult> &ocr_results);
 
 private:
-    // ov::CompiledModel detect_model;
-    ov::Core core;
     ov::InferRequest infer_request;
     string model_path;
     shared_ptr<ov::Model> model;
@@ -52,6 +49,5 @@ private:
     CrnnResizeImg resize_op_;
     Normalize normalize_op_;
     PermuteBatch permute_op_;
-
 };
 }

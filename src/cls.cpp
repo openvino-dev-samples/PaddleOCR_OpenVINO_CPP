@@ -11,21 +11,22 @@ bool Cls::init(std::string model_path)
     this->model_path = model_path;
     ov::Core core;
     this->model = core.read_model(this->model_path);
+    // dimension of batch size is dynamic
     this->model->reshape({{ov::Dimension(1, 6), cls_image_shape[0], cls_image_shape[1], cls_image_shape[2]}});
 
-    // -------- Step 3. Preprocessing API--------
+    // preprocessing API
     ov::preprocess::PrePostProcessor prep(this->model);
-    // Declare section of desired application's input format
+    // declare section of desired application's input format
     prep.input().tensor()
         .set_layout("NHWC")
         .set_color_format(ov::preprocess::ColorFormat::BGR);
-    // Specify actual model layout
+    // specify actual model layout
     prep.input().model()
         .set_layout("NCHW");
     prep.input().preprocess()
-        .mean({0.5f, 0.5f, 0.5f})
-        .scale({255.0 * 0.5f, 255.0 * 0.5f, 255.0 * 0.5f});
-    // Dump preprocessor
+        .mean(this->mean_)
+        .scale(this->scale_);
+    // dump preprocessor
     std::cout << "Preprocessor: " << prep << std::endl;
     this->model = prep.build();
     this->cls_model = core.compile_model(this->model, "CPU");
@@ -44,44 +45,32 @@ bool Cls::run(std::vector<cv::Mat> img_list, std::vector<OCRPredictResult> &ocr_
     for (int beg_img_no = 0; beg_img_no < img_num; beg_img_no += this->cls_batch_num_) {
         int end_img_no = std::min(img_num, beg_img_no + this->cls_batch_num_);
         int batch_num = end_img_no - beg_img_no;
-        // preprocess    
+        
         std::vector<ov::Tensor> batch_tensors;
-        // auto input_tensor = this->infer_request.get_input_tensor();
-        // auto input_data = input_tensor.data<float>();
         ov::Shape intput_shape = {batch_num, cls_image_shape[1], cls_image_shape[2],3};
         for (int ino = beg_img_no; ino < end_img_no; ino++) {
             cv::Mat srcimg;
             img_list[ino].copyTo(srcimg);
             cv::Mat resize_img;
+            // preprocess 
             this->resize_op_.Run(srcimg, resize_img, this->cls_image_shape);
-            resize_img.convertTo(resize_img, CV_32FC1);
+            resize_img.convertTo(resize_img, CV_32FC3, e);
             if (resize_img.cols < cls_image_shape[2]) {
                 cv::copyMakeBorder(resize_img, resize_img, 0, 0, 0,
                                 cls_image_shape[2] - resize_img.cols,
                                 cv::BORDER_CONSTANT, cv::Scalar(0, 0, 0));
             }
+            // prepare input tensor
             ov::Tensor input_tensor(input_port.get_element_type(), intput_shape, (float*)resize_img.data);
             batch_tensors.push_back(input_tensor);
-            
-            // for (int h = 0; h < cls_image_shape[1]; h++)
-            // {
-            //     for (int w = 0; w < resize_img.cols; w++)
-            //     {
-            //         for (int c = 0; c < 3; c++)
-            //         {
-            //             int index = c + 3*w + 3*resize_img.cols*h + 3*resize_img.cols*cls_image_shape[1]*ino;
-            //             input_data[index] = float(resize_img.at<cv::Vec3b>(h, w)[c]);
-            //         }
-            //     }
-            // }
-            // ov::Tensor input_tensor(input_port.get_element_type(), input_port.get_shape(), (float*)resize_img.data);
         }
-    
+
+        // set batched input tensors
         this->infer_request.set_input_tensors(batch_tensors);
-        // -------- Step 7. Start inference --------
+        // start inference
         this->infer_request.infer();
 
-
+        // get output tensor
         auto output = this->infer_request.get_output_tensor();
         const float *out_data = output.data<const float>();
         for (size_t batch_idx = 0; batch_idx < output.get_size() / 2; batch_idx++){
@@ -93,8 +82,6 @@ bool Cls::run(std::vector<cv::Mat> img_list, std::vector<OCRPredictResult> &ocr_
                 &out_data[(batch_idx + 1) * 2]));
             cls_labels[beg_img_no + batch_idx] = label;
             cls_scores[beg_img_no + batch_idx] = score;
-
-
         }
     }
 
