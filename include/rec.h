@@ -42,7 +42,7 @@ private:
     bool is_scale_ = true;
     std::vector<std::string> label_list_;
     int rec_batch_num_ = 6;
-    int rec_img_h_ = 32;
+    int rec_img_h_ = 48;
     int rec_img_w_ = 320;
     std::vector<int> rec_image_shape_ = {3, rec_img_h_, rec_img_w_};
     
