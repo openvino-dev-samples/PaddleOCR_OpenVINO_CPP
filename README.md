@@ -14,7 +14,7 @@ This sample shows how to use the OpenVINO C++ 2.0 API to deploy Paddle PP-OCRv3 
 ## How to build the sample
 
 ### Install OpenVINO toolkits 2022.2 from achieved package
-***Download and install OpenVINO C++ runtime:***
+Download and install OpenVINO C++ runtime:
 https://docs.openvino.ai/latest/openvino_docs_install_guides_installing_openvino_from_archive_linux.html
 
 ### Download the repository
