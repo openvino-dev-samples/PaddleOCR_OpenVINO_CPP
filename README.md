@@ -67,8 +67,10 @@ PP-OCRv3 Series Model List（Update on September 8th）
 ```
  
 ### Output example
-![Uploading 00056221.jpg…]() ![Uploading result.jpg…]()
+![00056221](https://user-images.githubusercontent.com/91237924/205421176-77296ee7-f200-4914-a719-dc1e827d0dd1.jpg)
+![result](https://user-images.githubusercontent.com/91237924/205421169-08045ce3-5e7d-42f5-bd1a-911f76aac59b.jpg)
 
+```
 0       det boxes: [[0,0],[160,0],[160,51],[0,51]] rec text: 7788.com rec score: 0.9815 cls label: 0 cls score: 0.93939
 1       det boxes: [[74,100],[231,98],[231,126],[74,128]] rec text: Z57A001950 rec score: 0.9929 cls label: 0 cls score: 1
 2       det boxes: [[406,101],[508,101],[508,133],[406,133]] rec text: 杭州东售 rec score: 0.99703 cls label: 0 cls score: 1
@@ -89,3 +91,4 @@ PP-OCRv3 Series Model List（Update on September 8th）
 17      det boxes: [[61,363],[327,363],[327,387],[61,387]] rec text: 9004-1300-5707-08A0-0195-0 rec score: 0.911793 cls label: 0 cls score: 0.999793
 18      det boxes: [[419,357],[512,357],[512,382],[419,382]] rec text: 和谐号 rec score: 0.995543 cls label: 0 cls score: 0.999999
 19      det boxes: [[14,492],[242,491],[242,506],[14,507]] rec text: Canon PowerShot A3400 IS F2.8 1/20s IS0400 rec score: 0.914529 cls label: 0 cls score: 0.998959
+```
