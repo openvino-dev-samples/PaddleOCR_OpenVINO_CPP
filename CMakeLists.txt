@@ -10,7 +10,7 @@ include_directories(
     /opt/intel/openvino_2022.2/runtime/include
     /opt/intel/openvino_2022.2/runtime/include/ie
     /opt/intel/openvino_2022.2/runtime/include/ngraph
-    /opt/intel/openvino_2022.2runtime/include/openvino
+    /opt/intel/openvino_2022.2/runtime/include/openvino
     ${OpenCV_INCLUDE_DIR}
 )
 link_directories("/opt/intel/openvino_2022.2/runtime/lib")
