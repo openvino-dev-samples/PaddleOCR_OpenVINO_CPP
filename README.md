@@ -1,5 +1,5 @@
 # PaddleOCR_OpenVINO_CPP
-This sample shows how to use the OpenVINO C++ 2.0 API to deploy Paddle PP-OCRv3 model, modified from the example in (PaddleOCR)[https://github.com/PaddlePaddle/PaddleOCR/tree/release/2.6/deploy/cpp_infer].
+This sample shows how to use the OpenVINO C++ 2.0 API to deploy Paddle PP-OCRv3 model, modified from the example in [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR/tree/release/2.6/deploy/cpp_infer).
 
 <img width="468" alt="PaddleOCR" src="https://user-images.githubusercontent.com/91237924/205211572-ee387d7c-6341-4541-85e7-6bfcbcdcbd79.png">
 
