@@ -42,10 +42,10 @@ link_directories("/opt/intel/openvino_2022.2/runtime/lib")
 
 ### Build the source code
 ```
-mkdir build
-cd build
-cmake ..
-make
+$ mkdir build
+$ cd build
+$ cmake ..
+$ make
 ```
 
 ### Download test model
@@ -58,7 +58,7 @@ PP-OCRv3 Series Model List（Update on September 8th）
 
 ### Run the program
 ```
-./build/ocr_reader \
+$ ./build/ocr_reader \
     ~/input_image.jpg \
     ../data/ppocr_keys_v1.txt \
     ~\ch_PP-OCRv3_det_infer/inference.pdmodel \
