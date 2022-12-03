@@ -19,7 +19,7 @@ https://docs.openvino.ai/latest/openvino_docs_install_guides_installing_openvino
 
 ### Download the repository
 ```shell
-git clone git@github.com:OpenVINO-dev-contest/PaddleOCR_OpenVINO_CPP.git
+$ git clone git@github.com:OpenVINO-dev-contest/PaddleOCR_OpenVINO_CPP.git
 ```
 
 ### Configure the CMakeLists.txt
