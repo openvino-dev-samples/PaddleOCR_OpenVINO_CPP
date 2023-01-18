@@ -1,7 +1,16 @@
 # PaddleOCR_OpenVINO_CPP
-This sample shows how to use the OpenVINO C++ 2.0 API to deploy Paddle PP-OCRv3 model, modified from the example in [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR/tree/release/2.6/deploy/cpp_infer).
+This sample shows how to use the OpenVINO C++ 2.0 API to deploy Paddle PP-OCRv3 and PP-structure models, modified from the example in [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR/tree/release/2.6/deploy/cpp_infer).
 
-<img width="1000" alt="PaddleOCR" src="https://user-images.githubusercontent.com/91237924/205211572-ee387d7c-6341-4541-85e7-6bfcbcdcbd79.png">
+## PP-OCR
+PP-OCR is a two-stage OCR system, in which the text detection algorithm is DB, and the text recognition algorithm is SVTR. Besides, a text direction classifier is added between the detection and recognition modules to deal with text in different directions.
+
+<img width="1236" alt="ppocrv3_framework" src="https://user-images.githubusercontent.com/91237924/212936308-05a184af-5826-40e5-9cc5-719b15efaf60.png">
+
+## Layout Information Extraction
+In the layout analysis task, the image first goes through the layout analysis model to divide the image into different areas such as text, table, and figure, and then analyze these areas separately. For example, the table area is sent to the form recognition module for structured recognition, and the text area is sent to the OCR engine for text recognition. Finally, the layout recovery module restores it to a word or pdf file with the same layout as the original image.
+
+<img src="https://user-images.githubusercontent.com/14270174/195265734-6f4b5a7f-59b1-4fcc-af6d-89afc9bd51e1.jpg" width="100%"/>
+
 
 ## System requirements
 
@@ -50,23 +59,45 @@ $ make
 
 ### Download test model
 Download the models:
-PP-OCRv3 Series Model List（Update on September 8th）
+**1) PP-OCRv3 Series Model List（Update on September 8th**
 
 | Model introduction                                           | Model name                   | Recommended scene | Detection model                                              | Direction classifier                                         | Recognition model                                            |
 | ------------------------------------------------------------ | ---------------------------- | ----------------- | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
 | Chinese and English ultra-lightweight PP-OCRv3 model（16.2M）     | ch_PP-OCRv3_xx          | Mobile & Server | [inference model](https://paddleocr.bj.bcebos.com/PP-OCRv3/chinese/ch_PP-OCRv3_det_infer.tar) | [inference model](https://paddleocr.bj.bcebos.com/dygraph_v2.0/ch/ch_ppocr_mobile_v2.0_cls_infer.tar) | [inference model](https://paddleocr.bj.bcebos.com/PP-OCRv3/chinese/ch_PP-OCRv3_rec_infer.tar) |
 
+**2) PP-structure models**
+   You can find the latest Layout Analysis model and Table Recognition model at [here](https://github.com/PaddlePaddle/PaddleOCR/blob/release/2.6/ppstructure/docs/models_list_en.md).
+
 ### Run the program
+**1) OCR**
 ```
-$ ./build/ocr_reader \
-    ~/input_image.jpg \
-    ../data/ppocr_keys_v1.txt \
-    ~\ch_PP-OCRv3_det_infer/inference.pdmodel \
-    ~\ch_ppocr_mobile_v2.0_cls_infer/inference.pdmodel \
-    ~\ch_PP-OCRv3_rec_infer/inference.pdmodel \
+$ ./build/reader \
+    -type ocr \
+    -input ~/input_image.jpg \
+    -label_dir ../data/ppocr_keys_v1.txt \
+    -det_model_dir ~\detection.pdmodel \
+    -cls_model_dir ~\classifier.pdmodel \
+    -rec_model_dir ~\recognizer.pdmodel
+```
+
+**2) Layout Information Extraction**
+```
+$ ./build/reader \
+    -type structure \
+    -input ~/input_image.jpg \
+    -label_dir ../data/ppocr_keys_v1.txt \
+    -layout_dict_dir ./data/layout_publaynet_dict.txt \
+    -table_dict_dir ./data/table_structure_dict.txt \
+    -det_model_dir ~\detection.pdmodel \
+    -rec_model_dir ~\recognizer.pdmodel \
+    -lay_model_dir ~\layout.pdmodel \
+    -tab_model_dir ~\table.pdmodel
 ```
  
 ### Output example
+
+**1) OCR**
+
 ![00056221](https://user-images.githubusercontent.com/91237924/205421176-77296ee7-f200-4914-a719-dc1e827d0dd1.jpg)
 ![result](https://user-images.githubusercontent.com/91237924/205421169-08045ce3-5e7d-42f5-bd1a-911f76aac59b.jpg)
 
@@ -92,3 +123,6 @@ $ ./build/ocr_reader \
 18      det boxes: [[419,357],[512,357],[512,382],[419,382]] rec text: 和谐号 rec score: 0.995543 cls label: 0 cls score: 0.999999
 19      det boxes: [[14,492],[242,491],[242,506],[14,507]] rec text: Canon PowerShot A3400 IS F2.8 1/20s IS0400 rec score: 0.914529 cls label: 0 cls score: 0.998959
 ```
+
+**2) Layout Information Extraction**
+![ppstructure](https://user-images.githubusercontent.com/91237924/213063872-81380100-227e-469a-a7bd-5becb9c14220.GIF)

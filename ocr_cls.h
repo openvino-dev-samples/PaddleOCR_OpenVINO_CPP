@@ -18,28 +18,26 @@
 
 namespace PaddleOCR {
 
-class Cls
+class Classifier
 {
 public:
-    Cls();
-    ~Cls();
-    
-    bool init(std::string model_path);
-    bool run(std::vector<cv::Mat> img_list, std::vector<OCRPredictResult> &ocr_results);
+    explicit Classifier(std::string model_path);
+    void Run(std::vector<cv::Mat> img_list, std::vector<OCRPredictResult> &ocr_results);
     
     double cls_thresh = 0.5;
 
 private:
     ov::InferRequest infer_request;
-    string model_path;
-    shared_ptr<ov::Model> model;
-    ov::CompiledModel cls_model;
+    std::string model_path;
+    std::shared_ptr<ov::Model> model;
+    ov::CompiledModel compiled_model;
 
     double e = 1.0 / 255.0;
     std::vector<float> mean_ = {0.5f, 0.5f, 0.5f};
     std::vector<float> scale_ = {0.5f, 0.5f, 0.5f};
     int cls_batch_num_ = 1;
     std::vector<int> cls_image_shape = {3, 48, 192};
+
     // resize
     ClsResizeImg resize_op_;
 };

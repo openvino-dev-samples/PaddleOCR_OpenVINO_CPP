@@ -1,12 +1,8 @@
-#include "include/cls.h"
+#include "include/ocr_cls.h"
 
 namespace PaddleOCR {
 
-Cls::Cls() {}
-
-Cls::~Cls() {}
-
-bool Cls::init(std::string model_path)
+Classifier::Classifier(std::string model_path)
 {
     this->model_path = model_path;
     ov::Core core;
@@ -29,18 +25,17 @@ bool Cls::init(std::string model_path)
     // dump preprocessor
     std::cout << "Preprocessor: " << prep << std::endl;
     this->model = prep.build();
-    this->cls_model = core.compile_model(this->model, "CPU");
-    this->infer_request = cls_model.create_infer_request();
-    return true;
+    this->compiled_model = core.compile_model(this->model, "CPU");
+    this->infer_request = compiled_model.create_infer_request();
 }
 
-bool Cls::run(std::vector<cv::Mat> img_list, std::vector<OCRPredictResult> &ocr_results)
+void Classifier::Run(std::vector<cv::Mat> img_list, std::vector<OCRPredictResult> &ocr_results)
 {
     std::vector<int> cls_labels(img_list.size(), 0);
     std::vector<float> cls_scores(img_list.size(), 0);
     std::vector<double> cls_times;
 
-    auto input_port = this->cls_model.input();
+    auto input_port = this->compiled_model.input();
     int img_num = img_list.size();
     for (int beg_img_no = 0; beg_img_no < img_num; beg_img_no += this->cls_batch_num_) {
         int end_img_no = std::min(img_num, beg_img_no + this->cls_batch_num_);
@@ -89,6 +84,5 @@ bool Cls::run(std::vector<cv::Mat> img_list, std::vector<OCRPredictResult> &ocr_
         ocr_results[i].cls_label = cls_labels[i];
         ocr_results[i].cls_score = cls_scores[i];
     }
-    return true;
 }
 }

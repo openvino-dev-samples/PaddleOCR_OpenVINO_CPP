@@ -12,19 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "opencv2/core.hpp"
-#include "opencv2/imgcodecs.hpp"
-#include "opencv2/imgproc.hpp"
-#include <chrono>
-#include <iomanip>
-#include <iostream>
-#include <ostream>
-#include <vector>
-
-#include <cstring>
-#include <fstream>
-#include <numeric>
-
 #include <include/preprocess_op.h>
 
 namespace PaddleOCR {
@@ -67,8 +54,8 @@ void Normalize::Run(cv::Mat *im, const std::vector<float> &mean,
 }
 
 void ResizeImgType0::Run(const cv::Mat &img, cv::Mat &resize_img,
-                         std::string limit_type, int limit_side_len, float &ratio_h,
-                         float &ratio_w) {
+                         std::string limit_type, int limit_side_len,
+                         float &ratio_h, float &ratio_w) {
   int w = img.cols;
   int h = img.rows;
   float ratio = 1.f;
@@ -143,10 +130,6 @@ void ClsResizeImg::Run(const cv::Mat &img, cv::Mat &resize_img,
 
   cv::resize(img, resize_img, cv::Size(resize_w, imgH), 0.f, 0.f,
              cv::INTER_LINEAR);
-  if (resize_w < imgW) {
-    cv::copyMakeBorder(resize_img, resize_img, 0, 0, 0, imgW - resize_w,
-                       cv::BORDER_CONSTANT, cv::Scalar(0, 0, 0));
-  }
 }
 
 void TableResizeImg::Run(const cv::Mat &img, cv::Mat &resize_img,
@@ -169,6 +152,11 @@ void TablePadImg::Run(const cv::Mat &img, cv::Mat &resize_img,
   int h = img.rows;
   cv::copyMakeBorder(img, resize_img, 0, max_len - h, 0, max_len - w,
                      cv::BORDER_CONSTANT, cv::Scalar(0, 0, 0));
+}
+
+void Resize::Run(const cv::Mat &img, cv::Mat &resize_img, const int h,
+                 const int w) {
+  cv::resize(img, resize_img, cv::Size(w, h));
 }
 
 } // namespace PaddleOCR

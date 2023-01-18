@@ -1,52 +1,96 @@
-#include "include/det.h"
-#include "include/cls.h"
-#include "include/rec.h"
 #include "opencv2/core.hpp"
 #include "opencv2/imgcodecs.hpp"
 #include "opencv2/imgproc.hpp"
 #include <iostream>
 #include <vector>
+#include <include/args.h>
+#include <include/paddleocr.h>
+#include <include/paddlestructure.h>
+#include <gflags/gflags.h>
 
 using namespace PaddleOCR;
 
+void check_params()
+{
+  if (FLAGS_type == "ocr")
+  {
+    if (FLAGS_det_model_dir.empty() || FLAGS_rec_model_dir.empty())
+    {
+      std::cout << "Need a path to detection and recogition model"
+                   "[Usage] --det_model_dir=/PATH/TO/DET_INFERENCE_MODEL/ --rec_model_dir=/PATH/TO/DET_INFERENCE_MODEL/ "
+                << std::endl;
+      exit(1);
+    }
+  }
+  else if (FLAGS_type == "structure")
+  {
+    if (FLAGS_det_model_dir.empty() || FLAGS_rec_model_dir.empty() || FLAGS_lay_model_dir.empty() || FLAGS_tab_model_dir.empty())
+    {
+      std::cout << "Need a path to detection, recogition, layout and table model"
+                   "[Usage] --det_model_dir=/PATH/TO/DET_INFERENCE_MODEL/ --rec_model_dir=/PATH/TO/DET_INFERENCE_MODEL/ --lay_model_dir=/PATH/TO/DET_INFERENCE_MODEL/ --tab_model_dir=/PATH/TO/DET_INFERENCE_MODEL/ "
+                << std::endl;
+      exit(1);
+    }
+  }
+}
+
 int main(int argc, char *argv[])
 {
-    const char *image_path{argv[1]};
-    const std::string &label_path{argv[2]};
-    const std::string det_model_path{argv[3]};
-    const std::string cls_model_path{argv[4]};
-    const std::string rec_model_path{argv[5]};
-    std::vector<OCRPredictResult> ocr_result;
-  
-    cv::Mat src_img = imread(image_path);
-    Det det;
-    det.init(src_img, det_model_path);
-    Cls cls;
-    cls.init(cls_model_path);
-    Rec rec;
-    rec.init(rec_model_path, label_path);
+  gflags::ParseCommandLineFlags(&argc, &argv, true);
+  check_params();
 
-    
-  
-    det.run(ocr_result);
+  // read image
+  cv::Mat src_img = imread(FLAGS_input);
 
-    // crop image
-    std::vector<cv::Mat> img_list;
-    for (int j = 0; j < ocr_result.size(); j++) {
-        cv::Mat crop_img;
-        crop_img = Utility::GetRotateCropImage(src_img, ocr_result[j].box);
-        img_list.push_back(crop_img);
-    }
-
-    cls.run(img_list, ocr_result);
-    for (int i = 0; i < img_list.size(); i++) {
-      if (ocr_result[i].cls_label % 2 == 1 &&
-          ocr_result[i].cls_score > cls.cls_thresh) {
-        cv::rotate(img_list[i], img_list[i], 1);
-      }
-    }
-    rec.run(img_list, ocr_result);
+  if (FLAGS_type == "ocr")
+  {
+    PPOCR ppocr;
+    std::vector<OCRPredictResult> ocr_result = ppocr.ocr(src_img);
     Utility::print_result(ocr_result);
     Utility::VisualizeBboxes(src_img, ocr_result,
-                                 "./result.jpg");
+                             "./ocr_result.jpg");
+  }
+  else if (FLAGS_type == "structure")
+  {
+
+    PaddleStructure paddlestructure;
+    std::vector<StructurePredictResult> structure_results = paddlestructure.structure(src_img);
+    for (int j = 0; j < structure_results.size(); j++)
+    {
+      std::cout << j << "\ttype: " << structure_results[j].type
+                << ", region: [";
+      std::cout << structure_results[j].box[0] << ","
+                << structure_results[j].box[1] << ","
+                << structure_results[j].box[2] << ","
+                << structure_results[j].box[3] << "], score: ";
+      std::cout << structure_results[j].confidence << ", res: ";
+
+      if (structure_results[j].type == "table")
+      {
+        std::cout << structure_results[j].html << std::endl;
+        if (structure_results[j].cell_box.size() > 0)
+        {
+          Utility::VisualizeBboxes(src_img, structure_results[j],
+                                   "./structure_result" + std::to_string(j) + ".jpg");
+        }
+      }
+      else
+      {
+        std::cout << "count of ocr result is : "
+                  << structure_results[j].text_res.size() << std::endl;
+        if (structure_results[j].text_res.size() > 0)
+        {
+          std::cout << "********** print ocr result "
+                    << "**********" << std::endl;
+          Utility::print_result(structure_results[j].text_res);
+          std::cout << "********** end print ocr result "
+                    << "**********" << std::endl;
+        }
+      }
+    }
+  }
+  else
+  {
+    std::cout << "only value in ['ocr','structure'] is supported" << std::endl;
+  }
 }

@@ -1,41 +1,33 @@
-#include "include/rec.h"
+#include "include/ocr_rec.h"
 
 namespace PaddleOCR {
 
-Rec::Rec() {}
-
-Rec::~Rec() {}
-
-bool Rec::init(string model_path, const string &label_path)
-{
+Recognizer::Recognizer(string model_path, const string &label_path) {
     ov::Core core;
     this->model_path = model_path;
     this->model = core.read_model(this->model_path);
     // reshape the model for dynamic batch size and sentence width
     this->model->reshape({{ov::Dimension(1, 6), this->rec_image_shape_[0], this->rec_image_shape_[1], -1}});
-    this->rec_model = core.compile_model(this->model, "CPU");
-    this->infer_request = this->rec_model.create_infer_request();
+    this->compiled_model = core.compile_model(this->model, "CPU");
+    this->infer_request = this->compiled_model.create_infer_request();
     this->label_list_ = Utility::ReadDict(label_path);
     this->label_list_.insert(this->label_list_.begin(),
-                             "#"); // blank char for ctc
+                                "#"); // blank char for ctc
     this->label_list_.push_back(" ");
-    return true;
 }
 
-bool Rec::run(std::vector<cv::Mat> img_list, std::vector<OCRPredictResult> &ocr_results)
-{
+void Recognizer::Run(std::vector<cv::Mat> img_list, std::vector<OCRPredictResult> &ocr_results) {
     std::vector<std::string> rec_texts(img_list.size(), "");
     std::vector<float> rec_text_scores(img_list.size(), 0);
-
     int img_num = img_list.size();
     std::vector<float> width_list;
     for (int i = 0; i < img_num; i++) {
         width_list.push_back(float(img_list[i].cols) / img_list[i].rows);
     }
     std::vector<int> indices = Utility::argsort(width_list);
-    
+
     for (int beg_img_no = 0; beg_img_no < img_num;
-        beg_img_no += this->rec_batch_num_) {
+            beg_img_no += this->rec_batch_num_) {
         int end_img_no = std::min(img_num, beg_img_no + this->rec_batch_num_);
         int batch_num = end_img_no - beg_img_no;
         int imgH = this->rec_image_shape_[1];
@@ -54,10 +46,10 @@ bool Rec::run(std::vector<cv::Mat> img_list, std::vector<OCRPredictResult> &ocr_
             cv::Mat srcimg;
             img_list[indices[ino]].copyTo(srcimg);
             cv::Mat resize_img;
-            // preprocess 
+            // preprocess
             this->resize_op_.Run(srcimg, resize_img, max_wh_ratio, this->rec_image_shape_);
             this->normalize_op_.Run(&resize_img, this->mean_, this->scale_,
-                        this->is_scale_);
+                                    this->is_scale_);
             norm_img_batch.push_back(resize_img);
             batch_width = max(resize_img.cols, batch_width);
         }
@@ -65,7 +57,7 @@ bool Rec::run(std::vector<cv::Mat> img_list, std::vector<OCRPredictResult> &ocr_
         std::vector<float> input(batch_num * 3 * imgH * batch_width, 0.0f);
         ov::Shape intput_shape = {batch_num, 3, imgH, batch_width};
         this->permute_op_.Run(norm_img_batch, input.data());
-        auto input_port = this->rec_model.input();
+        auto input_port = this->compiled_model.input();
         ov::Tensor input_tensor(input_port.get_element_type(), intput_shape, input.data());
         this->infer_request.set_input_tensor(input_tensor);
         // start inference
@@ -95,9 +87,9 @@ bool Rec::run(std::vector<cv::Mat> img_list, std::vector<OCRPredictResult> &ocr_
                     &out_data[(m * predict_shape[1] + n + 1) * predict_shape[2]]));
 
                 if (argmax_idx > 0 && (!(n > 0 && argmax_idx == last_index))) {
-                score += max_value;
-                count += 1;
-                str_res += this->label_list_[argmax_idx];
+                    score += max_value;
+                    count += 1;
+                    str_res += this->label_list_[argmax_idx];
                 }
                 last_index = argmax_idx;
             }
@@ -114,6 +106,5 @@ bool Rec::run(std::vector<cv::Mat> img_list, std::vector<OCRPredictResult> &ocr_
         ocr_results[i].text = rec_texts[i];
         ocr_results[i].score = rec_text_scores[i];
     }
-    return true;
 }
 }

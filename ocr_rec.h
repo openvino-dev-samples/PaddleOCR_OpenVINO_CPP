@@ -15,27 +15,23 @@
 #include <include/preprocess_op.h>
 #include <include/postprocess_op.h>
 #include <openvino/openvino.hpp>
-#include <openvino/core/preprocess/pre_post_process.hpp>
 
 using namespace std;
 using namespace cv;
 
 namespace PaddleOCR {
 
-class Rec
+class Recognizer
 {
 public:
-    Rec();
-    ~Rec();
-
-    bool init(string model_path, const string &label_path);
-    bool run(std::vector<cv::Mat> img_list, std::vector<OCRPredictResult> &ocr_results);
+    explicit Recognizer(string model_path, const string &label_path);
+    void Run(std::vector<cv::Mat> img_list, std::vector<OCRPredictResult> &ocr_results);
 
 private:
     ov::InferRequest infer_request;
     string model_path;
     shared_ptr<ov::Model> model;
-    ov::CompiledModel rec_model;
+    ov::CompiledModel compiled_model;
 
     std::vector<float> mean_ = {0.5f, 0.5f, 0.5f};
     std::vector<float> scale_ = {1 / 0.5f, 1 / 0.5f, 1 / 0.5f};
