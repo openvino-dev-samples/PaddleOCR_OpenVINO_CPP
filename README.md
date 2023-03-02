@@ -77,9 +77,9 @@ $ ./build/reader \
     -type ocr \
     -input ~/input_image.jpg \
     -label_dir ../data/ppocr_keys_v1.txt \
-    -det_model_dir ~\detection.pdmodel \
-    -cls_model_dir ~\classifier.pdmodel \
-    -rec_model_dir ~\recognizer.pdmodel
+    -det_model_dir ~/detection.pdmodel \
+    -cls_model_dir ~/classifier.pdmodel \
+    -rec_model_dir ~/recognizer.pdmodel
 ```
 
 **2) Layout Information Extraction**
@@ -90,12 +90,13 @@ $ ./build/reader \
     -label_dir ../data/ppocr_keys_v1.txt \
     -layout_dict_dir ./data/layout_publaynet_dict.txt \
     -table_dict_dir ./data/table_structure_dict.txt \
-    -det_model_dir ~\detection.pdmodel \
-    -rec_model_dir ~\recognizer.pdmodel \
-    -lay_model_dir ~\layout.pdmodel \
-    -tab_model_dir ~\table.pdmodel
+    -det_model_dir ~/detection.pdmodel \
+    -rec_model_dir ~/recognizer.pdmodel \
+    -lay_model_dir ~/layout.pdmodel \
+    -tab_model_dir ~/table.pdmodel
 ```
- 
+
+p.s You can try [Paddle2onnx](https://github.com/PaddlePaddle/Paddle2ONNX) to convert a model unsupportted by OpenVINO yet.
 ### Output example
 
 **1) OCR**
