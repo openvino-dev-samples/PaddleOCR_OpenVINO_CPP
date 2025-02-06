@@ -60,7 +60,7 @@ $ make
 ### Download test model
 Download the models:
 
-**1) PP-OCRv3 Series Model List
+**1) PP-OCRv3 Series Model List**
 
 | Model introduction                                           | Model name                   | Recommended scene | Detection model                                              | Direction classifier                                         | Recognition model                                            |
 | ------------------------------------------------------------ | ---------------------------- | ----------------- | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
